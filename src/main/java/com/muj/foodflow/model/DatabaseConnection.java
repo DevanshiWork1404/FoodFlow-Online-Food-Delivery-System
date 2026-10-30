@@ -13,7 +13,7 @@ public class DatabaseConnection {
             "postgres";
 
     private static final String PASSWORD =
-            "Devanshi";
+    {password};
 
     public static Connection getConnection() {
 
