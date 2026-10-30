@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoodFlow</title>
+<style>
+  :root { --card:rgba(16,16,16,.74); --ink:#f3efe8; --muted:#b9b1a5; --line:rgba(255,255,255,.16); --accent:#d62828; --accent-ink:#fff; --danger:#ff8f84; --field:rgba(255,255,255,.92); }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font-family:system-ui,"Segoe UI",sans-serif; color:var(--ink); line-height:1.5;
+    background:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.7)), #0c0c0c url("bg.png") center/cover fixed no-repeat; }
+  header { padding:18px 24px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:rgba(0,0,0,.35); }
+  header h1 { margin:0; font-family:Georgia,"Times New Roman",serif; font-size:1.7rem; letter-spacing:.16em; font-weight:400; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; }
+  nav button { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:500; }
+  nav button:hover { border-color:var(--accent); }
+  main { max-width:880px; margin:26px auto; padding:0 16px; }
+  section[hidden] { display:none; }
+  h2 { margin:0 0 16px; font-family:Georgia,"Times New Roman",serif; font-weight:400; font-size:1.3rem; letter-spacing:.04em; }
+  hr { border:0; border-top:1px solid var(--line); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:16px; backdrop-filter:blur(6px); }
+  .list { display:grid; gap:10px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .chip { font-size:.78rem; padding:1px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted); }
+  button { padding:9px 16px; border:0; border-radius:4px; font:inherit; cursor:pointer; background:var(--accent); color:var(--accent-ink); font-weight:600; letter-spacing:.03em; }
+  button:hover { filter:brightness(1.12); }
+  button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:500; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  input, select { width:100%; padding:10px 12px; border:0; border-radius:4px; font:inherit; background:var(--field); color:#1a1a1a; }
+  input::placeholder { color:#6d6760; }
+  label { display:grid; gap:5px; font-size:.9rem; color:var(--muted); }
+  form { display:grid; gap:12px; max-width:420px; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  .qty { display:flex; align-items:center; gap:10px; }
+  .qty button { width:32px; padding:4px 0; }
+  .layout { display:grid; grid-template-columns:1fr 280px; gap:16px; align-items:start; }
+  @media (max-width:720px) { .layout { grid-template-columns:1fr; } }
+  .error { color:var(--danger); min-height:1.4em; margin:0; }
+  .total { font-size:1.1rem; font-weight:700; }
+  .clickable { cursor:pointer; }
+  .clickable:hover { border-color:var(--accent); }
+  #login:not([hidden]) { display:grid; place-items:center; min-height:62vh; }
+  .login-box { width:100%; max-width:430px; background:var(--card); border:1px solid var(--line); border-radius:6px; padding:30px 34px; backdrop-filter:blur(6px); }
+  .login-box h2 { text-align:center; font-size:1.1rem; padding-bottom:14px; border-bottom:2px solid var(--accent); margin-bottom:22px; }
+  .login-box form { max-width:none; }
+  .login-box button { justify-self:center; min-width:150px; }
+  form[hidden] { display:none; }
+  .tabs { display:flex; border-bottom:1px solid var(--line); margin-bottom:22px; }
+  .tabs .tab { flex:1; background:transparent; color:var(--muted); border-radius:0; border-bottom:2px solid transparent; padding:10px 6px; margin-bottom:-1px; }
+  .tabs .tab.active { color:var(--ink); border-bottom-color:var(--accent); }
+  .stack { display:grid; gap:12px; } .stack[hidden] { display:none; }
+  select { cursor:pointer; }
+  .stat { text-align:center; flex:1; min-width:120px; } .stat b { display:block; font-size:1.5rem; }
+  #foodForm { max-width:none; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); align-items:end; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FoodFlow</h1>
+  <nav id="nav" hidden>
+    <button class="staff" data-go="dash">Dashboard</button>
+    <button class="cust" data-go="restaurants">Restaurants</button>
+    <button class="cust" data-go="orders">My orders</button>
+    <button class="cust" data-go="cart">Cart (<span id="cartCount">0</span>)</button>
+    <button id="logout">Log out</button>
+  </nav>
+</header>
+
+<main>
+  <section id="login">
+    <div class="login-box">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="loginForm">Log in</button>
+        <button type="button" class="tab" data-tab="signupForm">Create account</button>
+      </div>
+      <form id="loginForm">
+        <input name="email" type="email" placeholder="Email" aria-label="Email" required>
+        <input name="password" type="password" placeholder="Password" aria-label="Password" required>
+        <button type="submit">Log in</button>
+        <p class="error" id="loginError"></p>
+      </form>
+      <form id="signupForm" hidden>
+        <input name="fullname" type="text" placeholder="Full name" aria-label="Full name" maxlength="100" required>
+        <input name="email" type="email" placeholder="Email" aria-label="Email" maxlength="100" required>
+        <select name="role" id="roleSel" aria-label="I am a">
+          <option>Customer</option><option>Restaurant Owner</option>
+        </select>
+        <div class="stack" id="ownerFields" hidden>
+          <input name="restname" type="text" placeholder="Restaurant name" maxlength="100">
+          <input name="restaddr" type="text" placeholder="Restaurant address" maxlength="255">
+        </div>
+        <input name="phone" type="tel" placeholder="Mobile number" aria-label="Mobile number" maxlength="15" pattern="[0-9+ ]{7,15}" title="7 to 15 digits" required>
+        <input name="password" type="password" placeholder="Password" aria-label="Password" required>
+        <button type="submit">Create account</button>
+        <p class="error" id="signupError"></p>
+      </form>
+    </div>
+  </section>
+
+  <section id="restaurants" hidden>
+    <h2>Pick a restaurant</h2>
+    <div class="list" id="restaurantList"></div>
+  </section>
+
+  <section id="menu" hidden>
+    <h2 id="menuTitle"></h2>
+    <div class="layout">
+      <div class="list" id="menuList"></div>
+      <div class="card" id="cartBox"></div>
+    </div>
+  </section>
+
+  <section id="cart" hidden>
+    <h2>Your cart</h2>
+    <div class="card" id="cartFull"></div>
+  </section>
+
+  <section id="checkout" hidden>
+    <h2>Delivery and payment</h2>
+    <form id="checkoutForm" class="card">
+      <label>Address <input name="address" required></label>
+      <label>City <input name="city" required></label>
+      <label>Pincode <input name="pincode" maxlength="10" required></label>
+      <label>Payment method
+        <select name="paymentMethod">
+          <option>UPI</option><option>Card</option><option>Cash on Delivery</option>
+        </select>
+      </label>
+      <p class="total" id="checkoutTotal"></p>
+      <button type="submit" id="placeBtn">Place order</button>
+      <p class="error" id="checkoutError"></p>
+    </form>
+  </section>
+
+  <section id="done" hidden>
+    <h2>Order placed</h2>
+    <div class="card" id="doneBox"></div>
+  </section>
+
+  <section id="orders" hidden>
+    <h2>My orders</h2>
+    <div class="list" id="orderList"></div>
+  </section>
+  <section id="owner" hidden>
+    <h2 id="ownerTitle">My restaurant</h2>
+    <form id="foodForm" class="card">
+      <input name="name" placeholder="Food name" required>
+      <input name="description" placeholder="Description" required>
+      <input name="price" type="number" step="0.01" min="0" placeholder="Price" required>
+      <input name="category" placeholder="Category" required>
+      <button type="submit">Add food item</button>
+    </form>
+    <p class="error" id="ownerError"></p>
+    <h2>Menu</h2><div class="list" id="ownerMenu"></div>
+    <h2 style="margin-top:22px">Incoming orders</h2><div class="list" id="ownerOrders"></div>
+  </section>
+
+  <section id="admin" hidden>
+    <h2>Admin dashboard</h2>
+    <div class="row" id="adminStats" style="margin-bottom:16px"></div>
+    <h2>Users</h2><div class="list" id="adminUsers"></div>
+    <h2 style="margin-top:22px">All orders</h2><div class="list" id="adminOrders"></div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const money = n => "₹" + Number(n).toFixed(2);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let user = null, menuItems = {}, cart = { rid: null, rname: "", items: {} };
+try { user = JSON.parse(sessionStorage.getItem("ff_user")); } catch (e) {}
+
+const count = () => Object.values(cart.items).reduce((n, i) => n + i.qty, 0);
+const total = () => Object.values(cart.items).reduce((n, i) => n + i.qty * i.price, 0);
+
+async function api(path, opts) {
+  let res, text;
+  try {
+    res = await fetch(path, opts ? { method: opts.method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(opts.body) } : undefined);
+    text = await res.text();
+  } catch (e) {
+    throw new Error("Cannot reach the FoodFlow server. Make sure ApiServer is running and open http://localhost:7070");
+  }
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (e) {}
+  if (!res.ok || !text) {
+    if (data.error) throw new Error(data.error);
+    if (res.status === 404 || res.status === 405 || !text)
+      throw new Error("This page is not connected to the FoodFlow server (status " + res.status + "). Open http://localhost:7070 instead of this address.");
+    throw new Error("Server error " + res.status + ": " + text.slice(0, 120));
+  }
+  return data;
+}
+
+function show(id) {
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== id);
+  $("#nav").hidden = !user;
+  document.querySelectorAll(".cust").forEach(b => b.hidden = !user || user.role !== "Customer");
+  document.querySelectorAll(".staff").forEach(b => b.hidden = !user || user.role === "Customer");
+  $("#cartCount").textContent = count();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- login ---------- */
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    const u = await api("/api/login", { method: "POST", body: { email: f.email.value, password: f.password.value } });
+    startSession(u);
+  } catch (err) { $("#loginError").textContent = err.message; }
+};
+
+function startSession(u) {
+  user = u;
+  try { sessionStorage.setItem("ff_user", JSON.stringify(u)); } catch (e) {}
+  $("#loginError").textContent = "";
+  $("#signupError").textContent = "";
+  loadDash();
+}
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+  $("#loginForm").hidden = t.dataset.tab !== "loginForm";
+  $("#signupForm").hidden = t.dataset.tab !== "signupForm";
+});
+
+$("#roleSel").onchange = e => {
+  const owner = e.target.value === "Restaurant Owner";
+  $("#ownerFields").hidden = !owner;
+  $("#ownerFields").querySelectorAll("input").forEach(i => i.required = owner);
+};
+
+$("#signupForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    const u = await api("/api/signup", { method: "POST", body: {
+      name: f.fullname.value, email: f.email.value, phone: f.phone.value, password: f.password.value,
+      role: f.role.value, restaurantName: f.restname.value, restaurantAddress: f.restaddr.value } });
+    e.target.reset();
+    startSession(u);
+  } catch (err) { $("#signupError").textContent = err.message; }
+};
+
+$("#logout").onclick = () => {
+  user = null; cart = { rid: null, rname: "", items: {} };
+  try { sessionStorage.removeItem("ff_user"); } catch (e) {}
+  show("login");
+};
+
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if (!go) return;
+  const t = go.dataset.go;
+  if (t === "dash") loadDash();
+  else if (t === "restaurants") loadRestaurants();
+  else if (t === "orders") loadOrders();
+  else if (t === "cart") renderCartPage();
+  else if (t === "menu" && cart.rid) openMenu(cart.rid, cart.rname);
+  else if (t === "checkout") openCheckout();
+});
+
+/* ---------- restaurants and menu ---------- */
+async function loadRestaurants() {
+  const list = await api("/api/restaurants");
+  $("#restaurantList").innerHTML = list.length ? list.map(r => `
+    <div class="card row clickable" data-open="${r.restaurant_id}" data-name="${esc(r.restaurant_name)}">
+      <div><strong>${esc(r.restaurant_name)}</strong><div class="muted">${esc(r.restaurant_address)}</div></div>
+      <button class="ghost">View menu</button>
+    </div>`).join("") : `<p class="muted">No restaurants yet.</p>`;
+  show("restaurants");
+}
+
+$("#restaurantList").onclick = e => {
+  const c = e.target.closest("[data-open]");
+  if (c) openMenu(Number(c.dataset.open), c.dataset.name);
+};
+
+async function openMenu(rid, rname) {
+  if (cart.rid !== rid) {
+    if (count() > 0 && !confirm("Your cart has items from another restaurant. Start a new cart?")) return;
+    cart = { rid, rname, items: {} };
+  }
+  const items = await api(`/api/restaurants/${rid}/menu`);
+  menuItems = {};
+  items.forEach(i => menuItems[i.food_id] = i);
+  $("#menuTitle").textContent = rname;
+  $("#menuList").innerHTML = items.length ? items.map(i => `
+    <div class="card row">
+      <div><strong>${esc(i.food_name)}</strong> <span class="chip">${esc(i.category)}</span>
+        <div class="muted">${esc(i.description)}</div><div>${money(i.price)}</div></div>
+      <div class="qty"><button class="ghost" data-sub="${i.food_id}" aria-label="Remove one">−</button>
+        <span id="q${i.food_id}">${cart.items[i.food_id]?.qty || 0}</span>
+        <button data-add="${i.food_id}" aria-label="Add one">+</button></div>
+    </div>`).join("") : `<p class="muted">This restaurant has no items yet.</p>`;
+  renderCartBox();
+  show("menu");
+}
+
+$("#menuList").onclick = e => {
+  const add = e.target.closest("[data-add]"), sub = e.target.closest("[data-sub]");
+  if (add) change(Number(add.dataset.add), 1);
+  if (sub) change(Number(sub.dataset.sub), -1);
+};
+
+function change(id, d) {
+  const m = menuItems[id];
+  if (!m) return;
+  const q = Math.max(0, (cart.items[id]?.qty || 0) + d);
+  if (q === 0) delete cart.items[id];
+  else cart.items[id] = { name: m.food_name, price: Number(m.price), qty: q };
+  const span = $("#q" + id); if (span) span.textContent = q;
+  $("#cartCount").textContent = count();
+  renderCartBox();
+}
+
+function cartLines() {
+  return Object.values(cart.items).map(i =>
+    `<div class="row"><span>${esc(i.name)} × ${i.qty}</span><span>${money(i.qty * i.price)}</span></div>`).join("");
+}
+
+function renderCartBox() {
+  $("#cartBox").innerHTML = count()
+    ? `<strong>Your cart</strong>${cartLines()}<hr><div class="row total"><span>Total</span><span>${money(total())}</span></div>
+       <p><button data-go="checkout" style="width:100%">Checkout</button></p>`
+    : `<strong>Your cart</strong><p class="muted">Nothing here yet. Use + to add items.</p>`;
+}
+
+function renderCartPage() {
+  $("#cartFull").innerHTML = count()
+    ? `<p class="muted">From ${esc(cart.rname)}</p>${cartLines()}<hr><div class="row total"><span>Total</span><span>${money(total())}</span></div>
+       <p class="row"><button class="ghost" data-go="menu">Add more items</button><button data-go="checkout">Checkout</button></p>`
+    : `<p class="muted">Your cart is empty.</p><button data-go="restaurants">Browse restaurants</button>`;
+  show("cart");
+}
+
+/* ---------- checkout ---------- */
+function openCheckout() {
+  if (!count()) return;
+  $("#checkoutTotal").textContent = "Total: " + money(total());
+  $("#checkoutError").textContent = "";
+  show("checkout");
+}
+
+$("#checkoutForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target.elements;
+  $("#placeBtn").disabled = true;
+  try {
+    const r = await api("/api/orders", { method: "POST", body: {
+      userId: user.user_id, restaurantId: cart.rid,
+      address: f.address.value, city: f.city.value, pincode: f.pincode.value, paymentMethod: f.paymentMethod.value,
+      items: Object.entries(cart.items).map(([id, i]) => ({ foodId: Number(id), quantity: i.qty }))
+    }});
+    $("#doneBox").innerHTML = `<p>Order <strong>#${r.orderId}</strong> from ${esc(cart.rname)} is placed.</p>
+      <p>Total: ${money(r.total)}<br>Payment: ${esc(f.paymentMethod.value)} (${esc(r.paymentStatus)})</p>
+      <button data-go="orders">View my orders</button>`;
+    cart = { rid: null, rname: "", items: {} };
+    e.target.reset();
+    show("done");
+  } catch (err) { $("#checkoutError").textContent = err.message; }
+  $("#placeBtn").disabled = false;
+};
+
+/* ---------- order history ---------- */
+async function loadOrders() {
+  const list = await api(`/api/users/${user.user_id}/orders`);
+  $("#orderList").innerHTML = list.length ? list.map(o => `
+    <div class="card row">
+      <div><strong>Order #${o.order_id}</strong> · ${esc(o.restaurant_name)}
+        <div class="muted">${new Date(o.order_date).toLocaleString()} · ${esc(o.payment_method || "No payment info")} ${o.payment_status ? "(" + esc(o.payment_status) + ")" : ""}</div></div>
+      <div><span class="chip">${esc(o.status)}</span> <strong>${money(o.total_amount)}</strong></div>
+    </div>`).join("") : `<p class="muted">No orders yet.</p>`;
+  show("orders");
+}
+
+/* ---------- role dashboards ---------- */
+function loadDash() {
+  if (user.role === "Restaurant Owner") return loadOwner();
+  if (user.role === "Admin") return loadAdmin();
+  return loadRestaurants();
+}
+const when = ms => new Date(ms).toLocaleString();
+const orderCard = (o, who) => `<div class="card row"><div><strong>Order #${o.order_id}</strong> · ${esc(who)}
+  <div class="muted">${when(o.order_date)}${o.items ? " · " + esc(o.items) : ""} · ${esc(o.payment_method || "")} ${o.payment_status ? "(" + esc(o.payment_status) + ")" : ""}</div></div>
+  <div><span class="chip">${esc(o.status)}</span> <strong>${money(o.total_amount)}</strong></div></div>`;
+
+async function loadOwner() {
+  const base = "/api/owner/" + user.user_id;
+  try {
+    const [m, orders] = await Promise.all([api(base + "/menu"), api(base + "/orders")]);
+    $("#ownerTitle").textContent = m.restaurant || "My restaurant";
+    $("#ownerMenu").innerHTML = m.items.length ? m.items.map(i => `<div class="card row">
+      <div><strong>${esc(i.food_name)}</strong> <span class="chip">${esc(i.category)}</span>
+      <div class="muted">${esc(i.description)}</div><div>${money(i.price)}</div></div>
+      <button class="ghost" data-rmfood="${i.food_id}">Remove</button></div>`).join("") : `<p class="muted">No food items yet. Add your first one above.</p>`;
+    $("#ownerOrders").innerHTML = orders.length ? orders.map(o => orderCard(o, o.customer)).join("") : `<p class="muted">No orders yet.</p>`;
+    show("owner");
+  } catch (err) { $("#ownerError").textContent = err.message; show("owner"); }
+}
+$("#foodForm").onsubmit = async e => {
+  e.preventDefault(); const f = e.target.elements;
+  try {
+    await api(`/api/owner/${user.user_id}/food`, { method: "POST", body: { name: f.name.value, description: f.description.value, price: f.price.value, category: f.category.value } });
+    e.target.reset(); $("#ownerError").textContent = ""; loadOwner();
+  } catch (err) { $("#ownerError").textContent = err.message; }
+};
+$("#ownerMenu").onclick = async e => {
+  const b = e.target.closest("[data-rmfood]"); if (!b || !confirm("Remove this food item?")) return;
+  try { await api(`/api/owner/${user.user_id}/food/${b.dataset.rmfood}`, { method: "DELETE" }); loadOwner(); }
+  catch (err) { $("#ownerError").textContent = err.message; }
+};
+
+async function loadAdmin() {
+  const base = "/api/admin/" + user.user_id;
+  const [s, users, orders] = await Promise.all([api(base + "/summary"), api(base + "/users"), api(base + "/orders")]);
+  $("#adminStats").innerHTML = [["Users", s.users], ["Restaurants", s.restaurants], ["Orders", s.orders], ["Revenue", money(s.revenue)]]
+    .map(([k, v]) => `<div class="card stat"><b>${v}</b><span class="muted">${k}</span></div>`).join("");
+  $("#adminUsers").innerHTML = users.map(u => `<div class="card row"><div><strong>${esc(u.name)}</strong>
+    <div class="muted">${esc(u.email)} · ${esc(u.phone)}</div></div><span class="chip">${esc(u.role)}</span></div>`).join("");
+  $("#adminOrders").innerHTML = orders.length ? orders.map(o => orderCard(o, o.customer + " → " + o.restaurant_name)).join("") : `<p class="muted">No orders yet.</p>`;
+  show("admin");
+}
+
+/* ---------- start ---------- */
+user ? loadDash() : show("login");
+</script>
+</body>
+</html>
