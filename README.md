@@ -177,5 +177,5 @@ FoodFlow
 
 ## 👩‍💻 Author
 
-**Rana Devanshi Chitrang**, Manipal University Jaipur
+**Rana Devanshi Chitrang**, Manipal University Jaipur<br>
 **Ayushee Singh**, Manipal University Jaipur
